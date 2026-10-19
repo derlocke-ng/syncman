@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # syncman — bidirectional pair-wise folder sync manager (user scope only)
-# maintained by the Nova Core Team
+# part of the Kiwi Network toolset
 #
 # Jobs are plain files in ~/.config/syncman/jobs/<name>.job, one pair per line:
 #   /path/to/source :: /path/to/destination
 # Each running job is a systemd user service instance: syncjob@<name>.service
 set -euo pipefail
 
-SYNCMAN_VERSION="0.3.0"
+SYNCMAN_VERSION="0.4.0"
 
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/syncman"
 CONF="$CONF_DIR/syncman.conf"

@@ -1,7 +1,0 @@
-# nova.manifest — app metadata for the nova updater
-NAME=syncman
-DESCRIPTION=Bidirectional pair-wise folder sync (game saves etc.) with systemd user services
-VERSION=0.3.0
-TYPE=cli+gui
-SCOPE=user
-INSTALLER=install.sh

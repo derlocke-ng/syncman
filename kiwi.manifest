@@ -1,0 +1,22 @@
+# kiwi.manifest — see https://github.com/derlocke-ng/kiwi-updater
+NAME=syncman
+DESCRIPTION=Bidirectional pair-wise folder sync (game saves and more) as systemd user services, with a GTK4 panel
+VERSION=0.4.0
+AUTHOR=derlocke-ng
+HOMEPAGE=https://github.com/derlocke-ng/syncman
+
+COMPONENTS=cli gui service
+CATEGORY=Files
+TAGS=sync rsync folders saves games backup nextcloud systemd
+# the app's own icon, shown by the kiwi GUI — from kiwi-icons
+# (svg/classic/kiwi-cloud.svg); install.sh installs the same file as the
+# desktop icon under the app id
+ICON=data/syncman.svg
+ABOUT=README.md
+
+SCOPES=user
+
+# inotifywait is optional (instant sync instead of polling), so not listed
+DEPENDS=rsync systemctl
+
+INSTALLER=install.sh

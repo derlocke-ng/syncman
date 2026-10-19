@@ -1,9 +1,9 @@
 # syncman
 
 Bidirectional, pair-wise folder sync for Linux — built for game saves, works
-for any folders. Debloated rewrite for the Nova Network toolset: **rsync is
-the only dependency** (no yq, no inotify-tools), user scope only, managed by
-[nova-updater](https://github.com/nv-core/nova-updater).
+for any folders. Debloated rewrite for the Kiwi Network toolset: **rsync is
+the only dependency** (no yq; inotify-tools optional), user scope only, managed by
+[kiwi-updater](https://github.com/derlocke-ng/kiwi-updater).
 
 ## How it works
 
@@ -20,8 +20,9 @@ the only dependency** (no yq, no inotify-tools), user scope only, managed by
   (`syncjob@<name>.service`) — no generated unit files.
 - The worker loops: `rsync -a --update` in **both directions**, sleep
   `INTERVAL` (default 30 s), repeat. Newer files win, **nothing is ever
-  deleted**. An unchanged tree costs rsync almost nothing, so no inotify
-  needed.
+  deleted**. An unchanged tree costs rsync almost nothing, so inotify is not
+  needed — but if `inotifywait` is on the `PATH` (e.g. via brew), changes
+  sync instantly and `INTERVAL` is only the ceiling.
 
 ## Usage
 
@@ -49,24 +50,36 @@ Nextcloud tree, which carries the files between devices.
 
 ## Install
 
-Via nova (preferred):
+Via kiwi (preferred) — syncman is in the
+[kiwi-catalog](https://github.com/derlocke-ng/kiwi-catalog):
 
 ```bash
-nova add https://github.com/nv-core/syncman.git
-nova install syncman
+kiwi catalog add https://github.com/derlocke-ng/kiwi-catalog.git
+kiwi install syncman
 ```
 
 Manually: `./install.sh` (user-level only — `~/.local`, no root, ever).
+On a machine without GTK4 (or with `kiwi install --cli-only`) the panel is
+skipped.
+
+`kiwi uninstall syncman` stops and disables every job and removes the
+binaries, the unit template and the desktop entry, but keeps
+`~/.config/syncman`; `kiwi uninstall syncman --purge` removes that too. A
+`JOBS_DIR` outside it (a shared Nextcloud folder) is never deleted.
+
+Coming from the Nova Network edition: config and jobs live in the same
+place, so a `kiwi install syncman` picks them up; the installer drops the old
+`org.novanetwork.Syncman` desktop entry.
 
 ## Compared to the original syncman
 
 | original | this version |
 |---|---|
 | YAML configs + `yq` dependency | plain `src :: dst` lines, pure bash |
-| `inotifywait` (inotify-tools not in ostree base) | interval loop — rsync no-op when unchanged |
+| `inotifywait` required (inotify-tools not in ostree base) | interval loop — rsync no-op when unchanged; `inotifywait` used if present |
 | generated unit file per job | one systemd template unit `syncjob@.service` |
 | user + system service modes | user only |
 | 3 GUI iterations (757-line panel) | one compact GTK4/libadwaita panel |
-| standalone installer | nova convention (`nova.manifest` + `install.sh`) |
+| standalone installer | kiwi convention (`kiwi.manifest` + `install.sh`) |
 
 Sync semantics are unchanged: bidirectional, newest wins, non-destructive.

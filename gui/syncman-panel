@@ -18,7 +18,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk, Adw, GLib, Gio  # noqa: E402
 
-APP_ID = "org.novanetwork.Syncman"
+APP_ID = "eu.kiwinetwork.Syncman"
 REFRESH_MS = 5000
 HOSTNAME = socket.gethostname()
 
