@@ -83,3 +83,7 @@ place, so a `kiwi install syncman` picks them up; the installer drops the old
 | standalone installer | kiwi convention (`kiwi.manifest` + `install.sh`) |
 
 Sync semantics are unchanged: bidirectional, newest wins, non-destructive.
+
+## License
+
+GPL-3.0-or-later — see [LICENSE](LICENSE).

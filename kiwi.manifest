@@ -4,6 +4,7 @@ DESCRIPTION=Bidirectional pair-wise folder sync (game saves and more) as systemd
 VERSION=0.4.0
 AUTHOR=derlocke-ng
 HOMEPAGE=https://github.com/derlocke-ng/syncman
+LICENSE=GPL-3.0-or-later
 
 COMPONENTS=cli gui service
 CATEGORY=Files
