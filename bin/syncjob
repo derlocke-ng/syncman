@@ -29,17 +29,26 @@ ONCE=0; [[ "${2:-}" == "--once" ]] && ONCE=1
 JOB_FILE="$JOBS_DIR/$JOB.job"
 [[ -f $JOB_FILE ]] || { echo "error: no such job file: $JOB_FILE" >&2; exit 1; }
 
-# parse " :: " separated pairs (spaces in paths are fine, no quoting needed)
+# parse " :: " separated pairs (spaces in paths are fine, no quoting needed).
+# Re-read before every pass: the job file is edited while the service runs
+# (the panel appends a pair), and a pair that only counted after a restart
+# looked like it had been ignored. `read` also takes a last line with no
+# trailing newline, which an editor can leave behind.
 SRC=(); DST=()
-while IFS= read -r line; do
-    line="${line%%#*}"
-    [[ $line == *" :: "* ]] || continue
-    SRC+=("$(echo "${line%% :: *}" | sed 's/^ *//;s/ *$//')")
-    DST+=("$(echo "${line##* :: }" | sed 's/^ *//;s/ *$//')")
-done < "$JOB_FILE"
-
+read_pairs() {
+    local line
+    SRC=(); DST=()
+    while IFS= read -r line || [[ -n $line ]]; do
+        line="${line%%#*}"
+        [[ $line == *" :: "* ]] || continue
+        SRC+=("$(echo "${line%% :: *}" | sed 's/^ *//;s/ *$//')")
+        DST+=("$(echo "${line##* :: }" | sed 's/^ *//;s/ *$//')")
+    done < "$JOB_FILE"
+}
+read_pairs
 [[ ${#SRC[@]} -gt 0 ]] || { echo "error: no pairs in $JOB_FILE" >&2; exit 1; }
 echo "syncjob '$JOB': ${#SRC[@]} pair(s), interval ${INTERVAL}s"
+NPAIRS=${#SRC[@]}
 
 sync_all() {
     local i
@@ -66,7 +75,7 @@ command -v inotifywait >/dev/null 2>&1 && HAVE_INOTIFY=1
 
 wait_for_change() {
     if (( HAVE_INOTIFY )); then
-        local watch=() d
+        local watch=("$JOB_FILE") d      # the job file too: a new pair syncs at once
         for d in "${SRC[@]}" "${DST[@]}"; do [[ -d $d ]] && watch+=("$d"); done
         [[ ${#watch[@]} -gt 0 ]] || { sleep "$INTERVAL"; return; }
         # returns on the first event or after $INTERVAL — whichever comes first
@@ -79,5 +88,10 @@ wait_for_change() {
 
 while true; do
     wait_for_change
+    read_pairs
+    if (( ${#SRC[@]} != NPAIRS )); then
+        echo "job file changed: now ${#SRC[@]} pair(s)"
+        NPAIRS=${#SRC[@]}
+    fi
     sync_all
 done

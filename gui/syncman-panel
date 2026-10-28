@@ -496,9 +496,17 @@ class SyncmanWindow(Adw.ApplicationWindow):
             return
         dst = chooser.get_file().get_path()
         try:
+            # a file saved without a final newline would glue the new pair onto
+            # the previous line, and the service parsed that as one broken pair
+            with open(fpath, "rb+") as fh:
+                fh.seek(0, os.SEEK_END)
+                if fh.tell() > 0:
+                    fh.seek(-1, os.SEEK_END)
+                    if fh.read(1) != b"\n":
+                        fh.write(b"\n")
             with open(fpath, "a") as fh:
                 fh.write(f"{src} :: {dst}\n")
-            self._set_status(f"Pair added to '{name}'.")
+            self._set_status(f"Pair added to '{name}' — a running job picks it up by itself.")
         except Exception as e:  # noqa: BLE001
             self._set_status(f"Failed: {e}")
         self._refresh()
@@ -531,8 +539,8 @@ class SyncmanWindow(Adw.ApplicationWindow):
             text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True)
             try:
                 with open(fpath, "w") as fh:
-                    fh.write(text)
-                self._set_status(f"Saved {os.path.basename(fpath)}.")
+                    fh.write(text if text.endswith("\n") or not text else text + "\n")
+                self._set_status(f"Saved {os.path.basename(fpath)} — a running job picks it up by itself.")
             except Exception as e:  # noqa: BLE001
                 self._set_status(f"Save failed: {e}")
             win.close()

@@ -1,7 +1,7 @@
 # kiwi.manifest — see https://github.com/derlocke-ng/kiwi-updater
 NAME=syncman
 DESCRIPTION=Bidirectional pair-wise folder sync (game saves and more) as systemd user services, with a GTK4 panel
-VERSION=0.4.0
+VERSION=0.4.1
 AUTHOR=derlocke-ng
 HOMEPAGE=https://github.com/derlocke-ng/syncman
 LICENSE=GPL-3.0-or-later
