@@ -4,9 +4,13 @@
 #
 # Job file format ($JOBS_DIR/<name>.job), one pair per line:
 #   /path/to/source :: /path/to/destination
-# Sync semantics: rsync -a --update in both directions — newer files win,
-# nothing is ever deleted. Runs in a simple interval loop (no inotify needed;
-# an unchanged tree costs rsync almost nothing).
+# Sync semantics: rsync -a --update in both directions — newer files win.
+# Nothing is deleted unless DELETES=on: then a file deleted on one side since
+# the last pass is moved to the trash on the other side too (see
+# sync_deletes). Files matched by ~/.config/syncman/exclude or by a
+# .syncman-ignore file inside a pair's folders are left alone.
+# Runs in a simple interval loop (no inotify needed; an unchanged tree costs
+# rsync almost nothing).
 set -euo pipefail
 
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/syncman"
@@ -21,6 +25,8 @@ conf_get() { # key default
 JOBS_DIR="$(conf_get JOBS_DIR "$CONF_DIR/jobs")"
 JOBS_DIR="${JOBS_DIR/#\~/$HOME}"
 INTERVAL="$(conf_get INTERVAL 30)"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/syncman"
+TRASH_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/syncman/trash"
 
 JOB="${1:-}"
 [[ -n $JOB ]] || { echo "usage: syncjob <job-name> [--once]" >&2; exit 1; }
@@ -53,18 +59,117 @@ read_pairs
 echo "syncjob '$JOB': ${#SRC[@]} pair(s), interval ${INTERVAL}s"
 NPAIRS=${#SRC[@]}
 
+# What every rsync call leaves out: patterns in a .syncman-ignore file in any
+# folder of a pair (for that folder and below; the file itself syncs, so both
+# sides share it), and the global exclude file for every job.
+filters() {
+    FILTERS=(--filter='dir-merge,- .syncman-ignore')
+    [[ -f $CONF_DIR/exclude ]] && FILTERS+=(--exclude-from="$CONF_DIR/exclude")
+    return 0
+}
+
+EMPTY="$(mktemp -d)"
+trap 'rmdir "$EMPTY" 2>/dev/null' EXIT
+
+# every file and folder below $1 that a pass would sync, one relative path per
+# line (folders end in /), sorted; a dry run against an empty folder lists
+# them with the same filters the real runs use. -8 keeps names like ü.txt as
+# they are; escaped, they never matched the real file and were not deleted.
+list_side() {
+    rsync -a -n -8 --out-format='%n' "${FILTERS[@]}" "$1/" "$EMPTY/" |
+        grep -v '^\./$' | LC_ALL=C sort || true
+}
+
+state_file() { # src dst -> the pair's state file (without suffix)
+    echo "$STATE_DIR/$JOB/$(printf '%s :: %s' "$1" "$2" | sha1sum | cut -c1-16)"
+}
+
+trash() { # absolute path -> moved below today's trash folder
+    local dest
+    dest="$TRASH_DIR/$JOB/$(date +%F)$1"
+    [[ -e $dest || -L $dest ]] && dest="$dest.$(date +%H%M%S)"
+    mkdir -p "$(dirname "$dest")" && mv -f -- "$1" "$dest" &&
+        echo "deleted (moved to the trash): $1"
+}
+
+# day folders older than TRASH_DAYS go; 0 keeps the trash forever
+empty_trash() {
+    local days cutoff d
+    days="$(conf_get TRASH_DAYS 30)"
+    [[ $days =~ ^[0-9]+$ ]] && (( days > 0 )) || return 0
+    cutoff="$(date -d "-$days days" +%F)"
+    for d in "$TRASH_DIR/$JOB"/????-??-??; do
+        [[ -d $d && ${d##*/} < $cutoff ]] || continue
+        rm -rf -- "$d" && echo "emptied trash from ${d##*/}"
+    done
+}
+
+# Deletions, before the copies. The state file lists what both sides had after
+# the last pass. A path in it that is gone on one side and unchanged on the
+# other (modified no later than that pass) was deleted: it goes to the trash on
+# the other side as well. One changed since is kept, and copied back. A side
+# with nothing on it while the state is not empty is an unmounted disk or an
+# unfinished download, not a deletion: nothing is deleted then.
+sync_deletes() { # src dst
+    local a="$1" b="$2" st stamp la lb rel x y
+    st="$(state_file "$a" "$b")"
+    [[ -s $st.list && -f $st.stamp ]] || return 0
+    stamp="$(cat "$st.stamp")"
+    la="$(list_side "$a")"; lb="$(list_side "$b")"
+    if [[ -z $la || -z $lb ]]; then
+        echo "warning: $([[ -z $la ]] && echo "$a" || echo "$b") is empty — not syncing deletions for this pair" >&2
+        return 0
+    fi
+    for x in a b; do
+        if [[ $x == a ]]; then y="$b"; else y="$a"; fi
+        # files first, then folders deepest first, so a folder is empty by then
+        while IFS= read -r rel; do
+            [[ -n $rel ]] || continue
+            if [[ $rel == */ ]]; then
+                [[ -d $y/$rel ]] && rmdir -- "$y/$rel" 2>/dev/null &&
+                    echo "deleted folder: $y/$rel"
+            elif [[ -e $y/$rel || -L $y/$rel ]]; then
+                if (( $(stat -c %Y -- "$y/$rel") <= stamp )); then
+                    trash "$y/$rel"
+                else
+                    echo "kept $y/$rel: changed after it was deleted on the other side"
+                fi
+            fi
+        done < <(LC_ALL=C comm -23 "$st.list" <(if [[ $x == a ]]; then echo "$la"; else echo "$lb"; fi) |
+                 awk '{ print (/\/$/ ? "1" : "0") "\t" $0 }' | LC_ALL=C sort -t$'\t' -k1,1 -k2,2r | cut -f2-)
+    done
+}
+
+save_state() { # src dst — what both sides have now
+    local st stamp
+    st="$(state_file "$1" "$2")"
+    stamp="$(date +%s)"
+    mkdir -p "${st%/*}"
+    LC_ALL=C comm -12 <(list_side "$1") <(list_side "$2") > "$st.list.tmp" &&
+        mv -f "$st.list.tmp" "$st.list" && echo "$stamp" > "$st.stamp"
+}
+
 sync_all() {
-    local i
+    local i deletes
+    filters
+    deletes="$(conf_get DELETES off)"
+    # without DELETES=on no state is kept, so switching it on later never acts
+    # on an old list
+    [[ $deletes == on ]] || rm -rf "${STATE_DIR:?}/$JOB"
+    empty_trash
     for i in "${!SRC[@]}"; do
         if [[ ! -d "${SRC[$i]}" ]]; then
             echo "warning: source missing, skipping pair: ${SRC[$i]}" >&2
             continue
         fi
         mkdir -p "${DST[$i]}"
-        # bidirectional, newer wins, never deletes
-        rsync -a --update "${SRC[$i]}/" "${DST[$i]}/"
-        rsync -a --update "${DST[$i]}/" "${SRC[$i]}/"
+        [[ $deletes == on ]] && sync_deletes "${SRC[$i]}" "${DST[$i]}"
+        # bidirectional, newer wins
+        rsync -a --update "${FILTERS[@]}" "${SRC[$i]}/" "${DST[$i]}/"
+        rsync -a --update "${FILTERS[@]}" "${DST[$i]}/" "${SRC[$i]}/"
+        [[ $deletes == on ]] && save_state "${SRC[$i]}" "${DST[$i]}"
     done
+    return 0
 }
 
 sync_all

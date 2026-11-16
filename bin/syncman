@@ -81,11 +81,24 @@ cmd_add() {
     [[ -f $f ]] && die "job already exists: $f"
     cat > "$f" <<'EOF'
 # syncman job — one pair per line, separated by " :: "
-# newer files win in both directions; nothing is ever deleted.
+# newer files win in both directions; nothing is deleted unless
+# DELETES=on in syncman.conf. A leading ~ is your home folder.
 #/path/to/source :: /path/to/destination
 EOF
     info "created $f — add your pairs, then: syncman start $name"
     [[ -t 0 && -n ${EDITOR:-} ]] && "$EDITOR" "$f" || true
+}
+
+cmd_exclude() { # the global exclude file, created with a short explanation
+    local f="$CONF_DIR/exclude"
+    mkdir -p "$CONF_DIR"
+    [[ -f $f ]] || cat > "$f" <<'EOF'
+# syncman — left out of every job. One rsync pattern per line:
+#   *.tmp       files ending in .tmp, in any folder
+#   cache/      every folder named cache, with all it holds
+#   /logs/      only the folder logs at the top of a pair's folders
+EOF
+    "${EDITOR:-nano}" "$f"
 }
 
 cmd_edit() {
@@ -108,11 +121,13 @@ ${c_bold}usage:${c_off} syncman <command> [args]
   sync  <name|all>        one-shot sync now (foreground, no service)
   add   <name>            create a new job file
   edit  <name>            open a job file in \$EDITOR
+  exclude                 edit what no job syncs (a .syncman-ignore file in a
+                          pair's folder leaves out files for that pair)
   log   <name>            follow the job's journal
   version                 print version
 
 ${c_bold}files:${c_off}
-  config:  $CONF   (INTERVAL=30, JOBS_DIR=...)
+  config:  $CONF   (INTERVAL, JOBS_DIR, DELETES, TRASH_DAYS)
   jobs:    $JOBS_DIR/<name>.job   ("source :: destination" per line)
 EOF
 }
@@ -135,6 +150,7 @@ case "$CMD" in
     sync)      for j in $(targets "${1:-all}"); do syncjob "$j" --once; done ;;
     add)       cmd_add "${1:-}" ;;
     edit)      cmd_edit "${1:-}" ;;
+    exclude)   cmd_exclude ;;
     log)       [[ -n ${1:-} ]] || die "usage: syncman log <name>"
                journalctl --user -u "$(unit "$1")" -e -f ;;
     version)   echo "syncman $SYNCMAN_VERSION" ;;

@@ -40,9 +40,11 @@ Then `syncman start game-saves` runs the job in the background, now and after
 every login. `syncman-panel` (**Syncman** in your app grid) does the same with
 buttons.
 
-**Note.** syncman copies new and newer files in both directions and never
-deletes anything. A file you delete on one side comes back from the other.
-[How syncing works](docs/how-it-works.md) explains this and the other limits.
+**Note.** By default syncman copies new and newer files in both directions
+and never deletes anything, so a file you delete on one side comes back from
+the other. Switch on **Sync Deletions** to move it to syncman's trash on the
+other side too. [How syncing works](docs/how-it-works.md) explains both, and
+how to leave files out.
 
 ## Documentation
 
@@ -50,8 +52,8 @@ deletes anything. A file you delete on one side comes back from the other.
 |---|---|
 | [Install](docs/install.md) | requirements, install, update, uninstall |
 | [Using syncman](docs/usage.md) | jobs, every command, the panel |
-| [Configuration](docs/configuration.md) | `syncman.conf`, several machines, the app icon |
-| [How syncing works](docs/how-it-works.md) | what is copied when, and the known gaps |
+| [Configuration](docs/configuration.md) | `syncman.conf`, exclude lists, several machines, the app icon |
+| [How syncing works](docs/how-it-works.md) | what is copied and deleted when, and the known gaps |
 
 ## License
 

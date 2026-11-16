@@ -24,6 +24,7 @@ APPS="$DATA_HOME/applications"
 ICON_DIR="$DATA_HOME/icons/hicolor/scalable/apps"
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/syncman"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/syncman"
 
 say() { printf ':: %s\n' "$*"; }
 
@@ -89,6 +90,11 @@ INTERVAL=30
 # where the .job files live (point at a Nextcloud-synced folder to share
 # job definitions across machines):
 #JOBS_DIR=~/Nextcloud/syncman-jobs
+# on: a file deleted on one side is moved to the trash on the other side too
+# (~/.local/share/syncman/trash); off: nothing is ever deleted
+DELETES=off
+# days the trash keeps deleted files; 0 keeps them until you empty it
+TRASH_DAYS=30
 CONF
     say "done — try: syncman add <name>  |  syncman list  |  syncman-panel"
 }
@@ -106,7 +112,9 @@ do_uninstall() {
     for u in $(systemctl --user list-units 'syncjob@*.service' --all --plain --no-legend 2>/dev/null | awk '{print $1}'); do
         sysd disable --now "$u"
     done
-    rm -rf "${LIBDIR:?}"
+    # only our own files: the trash lives in the same folder
+    rm -f "$LIBDIR/kiwi_icon.py" "$LIBDIR/syncman.svg"
+    rmdir "$LIBDIR" 2>/dev/null || true
     rm -f "$BIN/syncman" "$BIN/syncjob" "$BIN/syncman-panel" \
           "$APPS/$APP_ID.desktop" "$APPS/org.novanetwork.Syncman.desktop" \
           "$ICON_DIR/$APP_ID.svg" "$UNIT_DIR/syncjob@.service"
@@ -118,8 +126,9 @@ do_uninstall() {
     # Only on --purge. A JOBS_DIR relocated outside $CONF_DIR (a shared
     # Nextcloud folder, say) is never touched: other machines read it.
     if [[ "${KIWI_PURGE:-0}" == 1 || "${1:-}" == --purge ]]; then
-        say "purging $CONF_DIR (config + job definitions)"
-        rm -rf "${CONF_DIR:?}"
+        say "purging $CONF_DIR (config + job definitions) and $STATE_DIR"
+        rm -rf "${CONF_DIR:?}" "${STATE_DIR:?}"
+        say "kept: $DATA_HOME/syncman/trash (files deleted by syncing) — remove it yourself"
     else
         say "kept: $CONF_DIR (config + job definitions) — remove with: $0 uninstall --purge"
     fi

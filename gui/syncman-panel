@@ -27,6 +27,23 @@ HOSTNAME = socket.gethostname()
 CONF_DIR = os.path.join(GLib.get_user_config_dir(), "syncman")
 CONF_FILE = os.path.join(CONF_DIR, "syncman.conf")
 WINDOW_FILE = os.path.join(CONF_DIR, "window.json")
+EXCLUDE_FILE = os.path.join(CONF_DIR, "exclude")
+IGNORE_NAME = ".syncman-ignore"
+TRASH_DIR = os.path.join(GLib.get_user_data_dir(), "syncman", "trash")
+
+EXCLUDE_SKELETON = """\
+# syncman — left out of every job. One rsync pattern per line:
+#   *.tmp       files ending in .tmp, in any folder
+#   cache/      every folder named cache, with all it holds
+#   /logs/      only the folder logs at the top of a pair's folders
+"""
+IGNORE_SKELETON = """\
+# syncman — left out for this folder and everything below it.
+# This file syncs too, so both sides of the pair use it.
+# One rsync pattern per line:
+#   *.tmp       files ending in .tmp
+#   cache/      every folder named cache, with all it holds
+"""
 
 # Wide enough for a job's whole button row and a readable path, and for the log
 # window (700×460) to open over it at its own size; the size it had when last
@@ -267,7 +284,8 @@ def status_attrs(j):
 
 JOB_SKELETON = """\
 # syncman job — one pair per line, separated by " :: "
-# newer files win in both directions; nothing is ever deleted.
+# newer files win in both directions; nothing is deleted unless you switch
+# on Sync Deletions. A leading ~ is your home folder.
 #/path/to/source :: /path/to/destination
 """
 
@@ -338,6 +356,41 @@ class SyncmanWindow(Adw.ApplicationWindow):
         folder_row.add_suffix(open_btn)
         cfg_grp.add(folder_row)
         self._folder_row = folder_row
+
+        excl_row = Adw.ActionRow(title="Exclude List",
+                                 subtitle="Files and folders no job syncs")
+        excl_btn = Gtk.Button(label="Edit", valign=Gtk.Align.CENTER)
+        excl_btn.connect("clicked", lambda *_: self._edit_file(EXCLUDE_FILE, EXCLUDE_SKELETON))
+        excl_row.add_suffix(excl_btn)
+        cfg_grp.add(excl_row)
+
+        # ── deletions ─────────────────────────────────────────────────────
+        del_grp = Adw.PreferencesGroup(
+            title="Deletions",
+            description="Off: nothing is ever deleted, and a file deleted on one side "
+                        "comes back from the other. On: it is moved to the trash on "
+                        "the other side too.")
+        page.append(del_grp)
+        self._del_row = Adw.SwitchRow(title="Sync Deletions",
+                                      subtitle="for every job, from the next pass on",
+                                      active=conf_get("DELETES", "off") == "on")
+        self._del_row.connect("notify::active", self._save_deletes)
+        del_grp.add(self._del_row)
+        try:
+            days = int(conf_get("TRASH_DAYS", "30"))
+        except ValueError:
+            days = 30
+        self._trash_row = Adw.SpinRow(
+            title="Keep Trash", subtitle="days; 0 keeps it until you empty it",
+            adjustment=Gtk.Adjustment(value=days, lower=0, upper=3650,
+                                      step_increment=1, page_increment=7))
+        self._trash_row.connect("notify::value", self._save_trash_days)
+        trash_btn = Gtk.Button(icon_name="user-trash-symbolic", valign=Gtk.Align.CENTER,
+                               tooltip_text="Open the trash folder")
+        trash_btn.add_css_class("flat")
+        trash_btn.connect("clicked", self._open_trash)
+        self._trash_row.add_suffix(trash_btn)
+        del_grp.add(self._trash_row)
 
         # ── new job ───────────────────────────────────────────────────────
         new_grp = Adw.PreferencesGroup(title="New Sync Job")
@@ -456,6 +509,26 @@ class SyncmanWindow(Adw.ApplicationWindow):
     def _status(self, text):
         GLib.idle_add(self._set_status, text)
 
+    def _save_deletes(self, row, *_):
+        on = row.get_active()
+        try:
+            conf_set("DELETES", "on" if on else "off")
+        except OSError as e:
+            self._set_status(f"Failed: {e}")
+            return
+        self._set_status("Deletions sync from the next pass on." if on else
+                         "Deletions no longer sync; nothing is deleted.")
+
+    def _save_trash_days(self, row, *_):
+        try:
+            conf_set("TRASH_DAYS", int(row.get_value()))
+        except OSError as e:
+            self._set_status(f"Failed: {e}")
+
+    def _open_trash(self, *_):
+        os.makedirs(TRASH_DIR, exist_ok=True)
+        Gio.AppInfo.launch_default_for_uri(f"file://{TRASH_DIR}", None)
+
     def _open_folder(self, *_):
         d = jobs_dir()
         os.makedirs(d, exist_ok=True)
@@ -529,9 +602,20 @@ class SyncmanWindow(Adw.ApplicationWindow):
             return [Adw.ActionRow(title="No pairs configured",
                                   subtitle="Use 'Add Pair' to set sync paths",
                                   selectable=False)]
-        return [Adw.ActionRow(title=shorten(src), subtitle=f"↔  {shorten(dst)}",
-                              selectable=False)
-                for src, dst in pairs]
+        rows = []
+        for src, dst in pairs:
+            row = Adw.ActionRow(title=shorten(src), subtitle=f"↔  {shorten(dst)}",
+                                selectable=False)
+            # the list lives in the first folder; it syncs to the second
+            folder = src if os.path.isdir(src) else dst
+            ign = Gtk.Button(icon_name="action-unavailable-symbolic", valign=Gtk.Align.CENTER,
+                             tooltip_text=f"What this pair leaves out ({IGNORE_NAME})")
+            ign.add_css_class("flat")
+            ign.connect("clicked", lambda _, f=folder: self._edit_file(
+                os.path.join(f, IGNORE_NAME), IGNORE_SKELETON))
+            row.add_suffix(ign)
+            rows.append(row)
+        return rows
 
     def _build_action_row(self, j):
         action_row = Adw.ActionRow(selectable=False)
@@ -730,20 +814,28 @@ class SyncmanWindow(Adw.ApplicationWindow):
         self._refresh()
 
     # ── edit job file in-app ────────────────────────────────────────────────
-    def _edit_file(self, fpath):
+    def _edit_file(self, fpath, skeleton=None):
+        """Edit a text file in a window; with a skeleton, a missing file starts
+        as that and is only created on Save."""
         try:
             with open(fpath) as fh:
                 content = fh.read()
+        except FileNotFoundError:
+            if skeleton is None:
+                self._set_status(f"Cannot read: {fpath} is missing")
+                return
+            content = skeleton
         except Exception as e:  # noqa: BLE001
             self._set_status(f"Cannot read: {e}")
             return
         win = Adw.Window(title=f"Edit — {os.path.basename(fpath)}",
                          transient_for=self, modal=True)
-        win.set_default_size(560, 380)
+        win.set_default_size(620, 420)
         tb = Adw.ToolbarView()
         win.set_content(tb)
         h = Adw.HeaderBar()
-        h.set_title_widget(Adw.WindowTitle(title=os.path.basename(fpath)))
+        h.set_title_widget(Adw.WindowTitle(title=os.path.basename(fpath),
+                                           subtitle=shorten(os.path.dirname(fpath), 50)))
         tb.add_top_bar(h)
         sc = Gtk.ScrolledWindow()
         tv = Gtk.TextView(monospace=True, wrap_mode=Gtk.WrapMode.NONE,
@@ -756,6 +848,7 @@ class SyncmanWindow(Adw.ApplicationWindow):
             buf = tv.get_buffer()
             text = buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True)
             try:
+                os.makedirs(os.path.dirname(fpath), exist_ok=True)
                 with open(fpath, "w") as fh:
                     fh.write(text if text.endswith("\n") or not text else text + "\n")
                 self._set_status(f"Saved {os.path.basename(fpath)} — a running job picks it up by itself.")

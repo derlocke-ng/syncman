@@ -8,8 +8,8 @@ per line; each started job runs as its own systemd user service.
 |---|---|---|
 | [Install](install.md) | everyone | requirements, install, update, uninstall |
 | [Using syncman](usage.md) | everyone | jobs, every command, the panel |
-| [Configuration](configuration.md) | everyone | `syncman.conf`, several machines, the app icon |
-| [How syncing works](how-it-works.md) | everyone | what is copied when, and the known gaps |
+| [Configuration](configuration.md) | everyone | `syncman.conf`, exclude lists, several machines, the app icon |
+| [How syncing works](how-it-works.md) | everyone | what is copied and deleted when, and the known gaps |
 
 These pages are also on [kiwi-network.eu](https://kiwi-network.eu/docs/),
 where they are pulled from this folder at every release.

@@ -32,6 +32,7 @@ effect without a restart.
 | `syncman list` | shows every job with its number of pairs and whether its service runs and is enabled |
 | `syncman add <job>` | creates an empty job file, and opens it in `$EDITOR` when you run it in a terminal with `$EDITOR` set |
 | `syncman edit <job>` | opens the job file in `$EDITOR`, or in `nano` |
+| `syncman exclude` | opens the global exclude list in `$EDITOR`, or in `nano` (see [Configuration](configuration.md#leave-files-out)) |
 | `syncman start <job>` | enables and starts the job's service |
 | `syncman stop <job>` | stops and disables it |
 | `syncman restart <job>` | restarts a running service, for example after you changed `INTERVAL` |
@@ -47,12 +48,17 @@ give no job.
 `syncman-panel`, **Syncman** in the app grid, shows the same jobs:
 
 - **Configuration**: the sync interval (saved to `syncman.conf`; restart the
-  running jobs to use it) and a button that opens the jobs folder.
+  running jobs to use it), a button that opens the jobs folder, and the global
+  exclude list.
+- **Deletions**: **Sync Deletions** and how many days the trash keeps deleted
+  files, with a button that opens the trash. See
+  [How syncing works](how-it-works.md#deletions).
 - **New Sync Job**: creates an empty job.
 - **Sync Jobs**: one row per job. Open a row for its pairs and its buttons:
   Start or Stop, Sync Now, Log (the last 80 lines), Add Pair (pick the two
   folders), Edit (the job file) and Delete (stops the job and deletes its file;
-  the synced folders stay). The check boxes choose which jobs **Start
+  the synced folders stay). The button on a pair edits that pair's
+  `.syncman-ignore` file. The check boxes choose which jobs **Start
   Selected** and **Stop Selected** act on. A job whose name ends in
   `-<this machine's host name>` is checked when the panel opens.
 - **Appearance**: the app icon, see [Configuration](configuration.md#the-app-icon).

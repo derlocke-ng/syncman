@@ -9,11 +9,37 @@ syncman reads its settings from `~/.config/syncman/syncman.conf`, one
 |---|---|---|
 | `INTERVAL` | `30` | Seconds between two passes of a running job. A job reads it when it starts, so restart running jobs after a change (`syncman restart all`). |
 | `JOBS_DIR` | `~/.config/syncman/jobs` | The folder with the job files. A leading `~` means your home folder. |
+| `DELETES` | `off` | `on` moves a file deleted on one side to the trash on the other side too, for every job, from the next pass on. See [How syncing works](how-it-works.md#deletions). |
+| `TRASH_DAYS` | `30` | Days the trash keeps deleted files. `0` keeps them until you empty the trash yourself. |
 | `ICON_COLOR` | empty | The colourway of the app icon; empty means the stock icon. Set it in the panel. |
 | `ICON_STYLE` | `classic` | The style of the app icon: `classic`, `flat` or `night`. |
 | `ICON_FILE` | empty | One of your own icon files from `~/.config/syncman/icons/`; it wins over the two above. |
 
 The panel also keeps its window size in `~/.config/syncman/window.json`.
+Running jobs read `DELETES`, `TRASH_DAYS` and the exclude lists again before
+every pass.
+
+## Leave files out
+
+Two kinds of lists name files and folders that syncman does not sync. Both
+hold one rsync pattern per line; lines starting with `#` are comments.
+
+| Pattern | Leaves out |
+|---|---|
+| `*.tmp` | every file whose name ends in `.tmp` |
+| `cache/` | every folder named `cache`, with everything in it |
+| `/logs/` | only the folder `logs` at the top of the folder the list applies to |
+
+- **The global exclude list**, `~/.config/syncman/exclude`, applies to every
+  pair of every job. Edit it with `syncman exclude` or in the panel under
+  **Configuration**.
+- **A `.syncman-ignore` file** in a folder applies to that folder and
+  everything below it. The file itself is synced, so both folders of a pair
+  use the same list. The button on a pair's row in the panel edits the one in
+  the pair's first folder.
+
+A file that is left out is neither copied nor deleted. It stays as it is on
+each side.
 
 ## Several machines
 
