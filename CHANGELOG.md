@@ -3,7 +3,7 @@
 Releases before 0.4.0 were the Nova Network edition; their history is in the
 release commit subjects.
 
-## Unreleased
+## 0.5.1 — 2026-11-16
 
 - A started job now finds `inotifywait` when it is installed with Homebrew.
   The service does not get the PATH of your login shell, so it looked only in
