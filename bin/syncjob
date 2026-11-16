@@ -36,13 +36,16 @@ JOB_FILE="$JOBS_DIR/$JOB.job"
 # trailing newline, which an editor can leave behind.
 SRC=(); DST=()
 read_pairs() {
-    local line
+    local line src dst
     SRC=(); DST=()
     while IFS= read -r line || [[ -n $line ]]; do
         line="${line%%#*}"
         [[ $line == *" :: "* ]] || continue
-        SRC+=("$(echo "${line%% :: *}" | sed 's/^ *//;s/ *$//')")
-        DST+=("$(echo "${line##* :: }" | sed 's/^ *//;s/ *$//')")
+        src="$(echo "${line%% :: *}" | sed 's/^ *//;s/ *$//')"
+        dst="$(echo "${line##* :: }" | sed 's/^ *//;s/ *$//')"
+        # a leading ~ is your home folder, as in JOBS_DIR
+        SRC+=("${src/#\~/$HOME}")
+        DST+=("${dst/#\~/$HOME}")
     done < "$JOB_FILE"
 }
 read_pairs

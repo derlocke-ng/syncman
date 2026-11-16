@@ -4,6 +4,7 @@
 # User scope ONLY: syncman manages per-user systemd services and per-user data.
 #
 #   <prefix>/bin/syncman, syncjob, syncman-panel
+#   <prefix>/share/syncman/                   the panel's icon kit + stock icon
 #   ~/.config/systemd/user/syncjob@.service   one template unit, one instance per job
 #   ~/.config/syncman/                        config + jobs — kept unless --purge
 set -euo pipefail
@@ -17,6 +18,7 @@ ACTION="${1:-install}"
 APP_ID=eu.kiwinetwork.Syncman
 PREFIX="${KIWI_PREFIX:-$HOME/.local}"
 BIN="$PREFIX/bin"
+LIBDIR="$PREFIX/share/syncman"
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 APPS="$DATA_HOME/applications"
 ICON_DIR="$DATA_HOME/icons/hicolor/scalable/apps"
@@ -58,7 +60,15 @@ do_install() {
         mkdir -p "$APPS"
         sed "s|^Exec=.*|Exec=$BIN/syncman-panel|" "$SRC/data/syncman-panel.desktop" \
             > "$APPS/$APP_ID.desktop"
+        # kiwi_icon.py draws the icon in the colour and style picked in the
+        # panel; syncman.svg is the stock one to go back to
+        install -Dm644 "$SRC/gui/kiwi_icon.py" "$LIBDIR/kiwi_icon.py"
+        install -Dm644 "$SRC/data/syncman.svg" "$LIBDIR/syncman.svg"
         install -Dm644 "$SRC/data/syncman.svg" "$ICON_DIR/$APP_ID.svg"
+        # an update must not undo the icon chosen in the panel
+        if grep -qE '^ICON_(FILE|COLOR|STYLE)=.' "$CONF_DIR/syncman.conf" 2>/dev/null; then
+            "$BIN/syncman-panel" --apply-icon || say "kept the stock icon"
+        fi
         refresh_desktop
     else
         say "no GTK4 stack (or KIWI_GUI=0) — skipping panel"
@@ -96,6 +106,7 @@ do_uninstall() {
     for u in $(systemctl --user list-units 'syncjob@*.service' --all --plain --no-legend 2>/dev/null | awk '{print $1}'); do
         sysd disable --now "$u"
     done
+    rm -rf "${LIBDIR:?}"
     rm -f "$BIN/syncman" "$BIN/syncjob" "$BIN/syncman-panel" \
           "$APPS/$APP_ID.desktop" "$APPS/org.novanetwork.Syncman.desktop" \
           "$ICON_DIR/$APP_ID.svg" "$UNIT_DIR/syncjob@.service"
