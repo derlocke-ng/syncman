@@ -177,6 +177,12 @@ sync_all
 
 # hybrid trigger: with inotifywait (optional, e.g. via brew) changes sync
 # instantly and the interval is just a safety ceiling; without it we poll.
+# A systemd user service does not get the PATH of a login shell, so
+# Homebrew's bin folders were never searched and a brew-installed
+# inotifywait was never found: look in them as well.
+for d in /home/linuxbrew/.linuxbrew/bin "$HOME/.linuxbrew/bin"; do
+    [[ -d $d && ":$PATH:" != *":$d:"* ]] && PATH="$PATH:$d"
+done
 HAVE_INOTIFY=0
 command -v inotifywait >/dev/null 2>&1 && HAVE_INOTIFY=1
 (( HAVE_INOTIFY )) && echo "inotifywait found — syncing instantly on changes"
