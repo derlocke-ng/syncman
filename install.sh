@@ -4,6 +4,7 @@
 # User scope ONLY: syncman manages per-user systemd services and per-user data.
 #
 #   <prefix>/bin/syncman, syncjob, syncman-panel
+#   <prefix>/share/syncman/                   the panel's icon kit + stock icon
 #   ~/.config/systemd/user/syncjob@.service   one template unit, one instance per job
 #   ~/.config/syncman/                        config + jobs — kept unless --purge
 set -euo pipefail
@@ -17,11 +18,13 @@ ACTION="${1:-install}"
 APP_ID=eu.kiwinetwork.Syncman
 PREFIX="${KIWI_PREFIX:-$HOME/.local}"
 BIN="$PREFIX/bin"
+LIBDIR="$PREFIX/share/syncman"
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 APPS="$DATA_HOME/applications"
 ICON_DIR="$DATA_HOME/icons/hicolor/scalable/apps"
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/syncman"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/syncman"
 
 say() { printf ':: %s\n' "$*"; }
 
@@ -58,7 +61,15 @@ do_install() {
         mkdir -p "$APPS"
         sed "s|^Exec=.*|Exec=$BIN/syncman-panel|" "$SRC/data/syncman-panel.desktop" \
             > "$APPS/$APP_ID.desktop"
+        # kiwi_icon.py draws the icon in the colour and style picked in the
+        # panel; syncman.svg is the stock one to go back to
+        install -Dm644 "$SRC/gui/kiwi_icon.py" "$LIBDIR/kiwi_icon.py"
+        install -Dm644 "$SRC/data/syncman.svg" "$LIBDIR/syncman.svg"
         install -Dm644 "$SRC/data/syncman.svg" "$ICON_DIR/$APP_ID.svg"
+        # an update must not undo the icon chosen in the panel
+        if grep -qE '^ICON_(FILE|COLOR|STYLE)=.' "$CONF_DIR/syncman.conf" 2>/dev/null; then
+            "$BIN/syncman-panel" --apply-icon || say "kept the stock icon"
+        fi
         refresh_desktop
     else
         say "no GTK4 stack (or KIWI_GUI=0) — skipping panel"
@@ -79,6 +90,11 @@ INTERVAL=30
 # where the .job files live (point at a Nextcloud-synced folder to share
 # job definitions across machines):
 #JOBS_DIR=~/Nextcloud/syncman-jobs
+# on: a file deleted on one side is moved to the trash on the other side too
+# (~/.local/share/syncman/trash); off: nothing is ever deleted
+DELETES=off
+# days the trash keeps deleted files; 0 keeps them until you empty it
+TRASH_DAYS=30
 CONF
     say "done — try: syncman add <name>  |  syncman list  |  syncman-panel"
 }
@@ -96,6 +112,9 @@ do_uninstall() {
     for u in $(systemctl --user list-units 'syncjob@*.service' --all --plain --no-legend 2>/dev/null | awk '{print $1}'); do
         sysd disable --now "$u"
     done
+    # only our own files: the trash lives in the same folder
+    rm -f "$LIBDIR/kiwi_icon.py" "$LIBDIR/syncman.svg"
+    rmdir "$LIBDIR" 2>/dev/null || true
     rm -f "$BIN/syncman" "$BIN/syncjob" "$BIN/syncman-panel" \
           "$APPS/$APP_ID.desktop" "$APPS/org.novanetwork.Syncman.desktop" \
           "$ICON_DIR/$APP_ID.svg" "$UNIT_DIR/syncjob@.service"
@@ -107,8 +126,9 @@ do_uninstall() {
     # Only on --purge. A JOBS_DIR relocated outside $CONF_DIR (a shared
     # Nextcloud folder, say) is never touched: other machines read it.
     if [[ "${KIWI_PURGE:-0}" == 1 || "${1:-}" == --purge ]]; then
-        say "purging $CONF_DIR (config + job definitions)"
-        rm -rf "${CONF_DIR:?}"
+        say "purging $CONF_DIR (config + job definitions) and $STATE_DIR"
+        rm -rf "${CONF_DIR:?}" "${STATE_DIR:?}"
+        say "kept: $DATA_HOME/syncman/trash (files deleted by syncing) — remove it yourself"
     else
         say "kept: $CONF_DIR (config + job definitions) — remove with: $0 uninstall --purge"
     fi
