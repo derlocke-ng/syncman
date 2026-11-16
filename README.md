@@ -11,7 +11,7 @@ your user, and has a GTK4 panel.
 
 - Latest release: **v0.5.0**, in the [Kiwi catalog](https://github.com/derlocke-ng/kiwi-catalog)
 - Runs on: Linux with systemd user services; the panel needs GTK4 and
-  libadwaita 1.5 or newer. There are no CI tests yet.
+  libadwaita 1.5 or newer. CI tests the sync logic on Ubuntu 24.04.
 - License: GPL-3.0-or-later
 
 ## Install
@@ -54,6 +54,7 @@ how to leave files out.
 | [Using syncman](docs/usage.md) | jobs, every command, the panel |
 | [Configuration](docs/configuration.md) | `syncman.conf`, exclude lists, several machines, the app icon |
 | [How syncing works](docs/how-it-works.md) | what is copied and deleted when, and the known gaps |
+| [Development](docs/development.md) | tests, CI, releases |
 
 ## License
 

@@ -1,0 +1,20 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - name: shellcheck
+        run: shellcheck -S warning bin/syncman bin/syncjob install.sh tests/*.sh
+      - name: the panel and the icon kit have to at least parse
+        run: python3 -m py_compile gui/syncman-panel gui/kiwi_icon.py
+      - name: release gate — versions agree, scripts executable in git
+        run: bash tests/check-version.sh
+      - name: what syncjob does to real folders
+        run: |
+          command -v rsync >/dev/null || { sudo apt-get update -q && sudo apt-get install -y -q rsync; }
+          bash tests/sync.sh
+      - name: docs follow the kiwi-docs guide
+        run: python3 .claude/skills/kiwi-docs/scripts/check-docs.py .

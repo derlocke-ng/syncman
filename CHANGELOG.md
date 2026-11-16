@@ -1,0 +1,41 @@
+# Changelog
+
+Releases before 0.4.0 were the Nova Network edition; their history is in the
+release commit subjects.
+
+## 0.5.0 — 2026-11-16
+
+- **Deletions can sync.** With `DELETES=on` in `syncman.conf` (**Sync
+  Deletions** in the panel), a file deleted on one side since the last pass is
+  moved to syncman's trash on the other side too, and a rename shows up as a
+  rename on both sides. A copy changed on the other side since the last pass
+  wins and comes back. If one side of a pair is suddenly empty (a disk not
+  mounted, a sync client not finished), nothing is deleted. Off by default.
+- **The trash** is `~/.local/share/syncman/trash/<job>/<date>/`; days older
+  than `TRASH_DAYS` (30) are emptied. Uninstalling keeps it.
+- **Exclude lists**: `~/.config/syncman/exclude` for every job
+  (`syncman exclude`), and a `.syncman-ignore` file in a pair's folder for that
+  folder and below. Both take rsync patterns; the panel edits both.
+- **Choose the app icon** in the panel: the stock cloud kiwi, any kiwi-icons
+  colourway and style, or a PNG or SVG of your own. An update keeps it.
+- **The panel's window** opens at 760×820, uses a wider column, and remembers
+  its size like the other kiwi apps. Paths show `~` for the home folder.
+- A leading `~` in a job's pair now means your home folder; it was taken
+  literally.
+- Uninstall no longer removes `~/.local/share/syncman` as a whole, where the
+  trash lives.
+- The documentation follows the kiwi-docs guide: a short README and pages in
+  `docs/`.
+
+## 0.4.1 — 2026-10-28
+
+- A pair added while a job runs is picked up by the running job: `syncjob`
+  reads the job file before every pass, and with `inotifywait` watches it.
+- A job file whose last line had no newline got the next pair glued onto that
+  line. The panel now ends the file with a newline before it appends.
+
+## 0.4.0 — 2026-10-20
+
+- The Kiwi Network edition: `kiwi.manifest` and a kiwi installer, the
+  kiwi-icons cloud kiwi as the icon, `uninstall --purge`, and GPL-3.0-or-later
+  as the license.
