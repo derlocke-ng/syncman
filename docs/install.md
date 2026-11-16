@@ -10,7 +10,7 @@ installs needs root.
 | `rsync` | copies the files |
 | systemd with user services (`systemctl --user`) | runs each started job in the background |
 | GTK4, libadwaita 1.5 or newer, PyGObject and Python 3 | only for the panel, `syncman-panel` |
-| `inotifywait` from inotify-tools (optional) | starts a pass as soon as a file changes, instead of waiting for the interval |
+| `inotifywait` from inotify-tools (optional) | starts a pass as soon as a file changes, instead of waiting for the interval. The service finds it on the system and in Homebrew (`/home/linuxbrew/.linuxbrew/bin` or `~/.linuxbrew/bin`) |
 
 On a machine without GTK4 the installer leaves the panel out and installs the
 command-line tools only.
