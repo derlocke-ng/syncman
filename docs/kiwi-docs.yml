@@ -7,3 +7,4 @@ pages:
   - usage.md: Using syncman
   - configuration.md: Configuration
   - how-it-works.md: How syncing works
+  - development.md: Development
