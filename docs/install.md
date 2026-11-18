@@ -41,7 +41,7 @@ cd syncman
 | Path | What |
 |---|---|
 | `~/.local/bin/syncman`, `syncjob`, `syncman-panel` | the command, the worker that runs one job, and the panel |
-| `~/.local/share/syncman/` | the panel's icon kit and the stock icon |
+| `~/.local/lib/syncman/` | the panel (a Python package) and the stock icon |
 | `~/.local/share/applications/eu.kiwinetwork.Syncman.desktop` | the app-grid entry |
 | `~/.local/share/icons/hicolor/scalable/apps/eu.kiwinetwork.Syncman.svg` | the app icon |
 | `~/.config/systemd/user/syncjob@.service` | one service template; each started job is an instance of it |

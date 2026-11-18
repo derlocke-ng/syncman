@@ -7,7 +7,7 @@
 # Each running job is a systemd user service instance: syncjob@<name>.service
 set -euo pipefail
 
-SYNCMAN_VERSION="0.5.1"
+SYNCMAN_VERSION="0.6.0"
 
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/syncman"
 CONF="$CONF_DIR/syncman.conf"

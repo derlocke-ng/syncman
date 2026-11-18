@@ -4,7 +4,7 @@
 # User scope ONLY: syncman manages per-user systemd services and per-user data.
 #
 #   <prefix>/bin/syncman, syncjob, syncman-panel
-#   <prefix>/share/syncman/                   the panel's icon kit + stock icon
+#   <prefix>/lib/syncman/                     the panel (Python) + the stock icon
 #   ~/.config/systemd/user/syncjob@.service   one template unit, one instance per job
 #   ~/.config/syncman/                        config + jobs — kept unless --purge
 set -euo pipefail
@@ -18,7 +18,8 @@ ACTION="${1:-install}"
 APP_ID=eu.kiwinetwork.Syncman
 PREFIX="${KIWI_PREFIX:-$HOME/.local}"
 BIN="$PREFIX/bin"
-LIBDIR="$PREFIX/share/syncman"
+LIBDIR="$PREFIX/lib/syncman"
+OLD_LIBDIR="$PREFIX/share/syncman"     # the icon kit and stock icon, until 0.5.1
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 APPS="$DATA_HOME/applications"
 ICON_DIR="$DATA_HOME/icons/hicolor/scalable/apps"
@@ -57,19 +58,27 @@ do_install() {
 
     if want_gui; then
         say "installing syncman-panel + desktop entry + icon"
-        install -Dm755 "$SRC/gui/syncman-panel" "$BIN/syncman-panel"
+        rm -rf "${LIBDIR:?}/syncman" "$LIBDIR/data"
+        mkdir -p "$LIBDIR"
+        cp -r "$SRC/src/syncman" "$LIBDIR/syncman"
+        find "$LIBDIR" -name __pycache__ -type d -prune -exec rm -rf {} +
+        # the stock icon, kept for "back to the stock icon" in Preferences
+        install -Dm644 "$SRC/data/syncman.svg" "$LIBDIR/data/syncman.svg"
+        # the panel is a Python package; the launcher puts it on the path
+        cat > "$BIN/syncman-panel" <<EOW
+#!/usr/bin/env bash
+export PYTHONPATH="$LIBDIR\${PYTHONPATH:+:\$PYTHONPATH}"
+exec python3 -m syncman.ui "\$@"
+EOW
+        chmod +x "$BIN/syncman-panel"
         mkdir -p "$APPS"
         sed "s|^Exec=.*|Exec=$BIN/syncman-panel|" "$SRC/data/syncman-panel.desktop" \
             > "$APPS/$APP_ID.desktop"
-        # kiwi_icon.py draws the icon in the colour and style picked in the
-        # panel; syncman.svg is the stock one to go back to
-        install -Dm644 "$SRC/gui/kiwi_icon.py" "$LIBDIR/kiwi_icon.py"
-        install -Dm644 "$SRC/data/syncman.svg" "$LIBDIR/syncman.svg"
         install -Dm644 "$SRC/data/syncman.svg" "$ICON_DIR/$APP_ID.svg"
-        # an update must not undo the icon chosen in the panel
-        if grep -qE '^ICON_(FILE|COLOR|STYLE)=.' "$CONF_DIR/syncman.conf" 2>/dev/null; then
-            "$BIN/syncman-panel" --apply-icon || say "kept the stock icon"
-        fi
+        # an update must not undo the icon chosen in Preferences; this also
+        # moves a choice made before 0.6.0 out of syncman.conf
+        "$BIN/syncman-panel" --apply-icon || say "kept the stock icon"
+        rm -f "$OLD_LIBDIR/kiwi_icon.py" "$OLD_LIBDIR/syncman.svg"
         refresh_desktop
     else
         say "no GTK4 stack (or KIWI_GUI=0) — skipping panel"
@@ -113,8 +122,8 @@ do_uninstall() {
         sysd disable --now "$u"
     done
     # only our own files: the trash lives in the same folder
-    rm -f "$LIBDIR/kiwi_icon.py" "$LIBDIR/syncman.svg"
-    rmdir "$LIBDIR" 2>/dev/null || true
+    rm -rf "${LIBDIR:?}"
+    rm -f "$OLD_LIBDIR/kiwi_icon.py" "$OLD_LIBDIR/syncman.svg"
     rm -f "$BIN/syncman" "$BIN/syncjob" "$BIN/syncman-panel" \
           "$APPS/$APP_ID.desktop" "$APPS/org.novanetwork.Syncman.desktop" \
           "$ICON_DIR/$APP_ID.svg" "$UNIT_DIR/syncjob@.service"
