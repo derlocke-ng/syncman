@@ -10,7 +10,7 @@ from pathlib import Path
 
 from .kit import AppInfo
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 APP = "syncman"
 APP_ID = "eu.kiwinetwork.Syncman"
 NAME = "Syncman"

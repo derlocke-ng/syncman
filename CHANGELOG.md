@@ -3,6 +3,14 @@
 Releases before 0.4.0 were the Nova Network edition; their history is in the
 release commit subjects.
 
+## 0.6.1 — unreleased
+
+- **Start Selected** and **Stop Selected** are buttons above the jobs
+  again, as before 0.6.0, not items in the menu.
+- The menu (☰) opens the jobs folder and the trash folder.
+- Choosing an app icon no longer shows a message for every change; the note
+  about the app grid is a line under "Appearance" (kit 0.1.2).
+
 ## 0.6.0 — 2026-11-19
 
 - **The panel is laid out like the other Kiwi apps.** It is built on the kit
