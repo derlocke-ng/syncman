@@ -3,7 +3,7 @@
 Releases before 0.4.0 were the Nova Network edition; their history is in the
 release commit subjects.
 
-## 0.6.1 — unreleased
+## 0.6.1 — 2026-11-19
 
 - **Start Selected** and **Stop Selected** are buttons above the jobs
   again, as before 0.6.0, not items in the menu.
