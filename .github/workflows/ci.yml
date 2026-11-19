@@ -7,9 +7,16 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - name: shellcheck
-        run: shellcheck -S warning bin/syncman bin/syncjob install.sh tests/*.sh
-      - name: the panel and the icon kit have to at least parse
-        run: python3 -m py_compile gui/syncman-panel gui/kiwi_icon.py
+        run: shellcheck -S warning bin/syncman bin/syncjob install.sh tests/*.sh tools/*.sh
+      - name: the kit is the unmodified copy from kiwi-template
+        run: bash tools/kit-check.sh
+      - name: the panel imports with GTK 4 and libadwaita
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q python3-gi gir1.2-adw-1
+          python3 -m compileall -q src
+          PYTHONPATH=src python3 -c "import gi; gi.require_version('Gtk','4.0'); gi.require_version('Adw','1'); import syncman.ui.window, syncman.ui.prefs"
+      - name: the icon choice moves out of syncman.conf
+        run: bash tests/panel.sh
       - name: release gate — versions agree, scripts executable in git
         run: bash tests/check-version.sh
       - name: what syncjob does to real folders

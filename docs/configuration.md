@@ -11,11 +11,12 @@ syncman reads its settings from `~/.config/syncman/syncman.conf`, one
 | `JOBS_DIR` | `~/.config/syncman/jobs` | The folder with the job files. A leading `~` means your home folder. |
 | `DELETES` | `off` | `on` moves a file deleted on one side to the trash on the other side too, for every job, from the next pass on. See [How syncing works](how-it-works.md#deletions). |
 | `TRASH_DAYS` | `30` | Days the trash keeps deleted files. `0` keeps them until you empty the trash yourself. |
-| `ICON_COLOR` | empty | The colourway of the app icon; empty means the stock icon. Set it in the panel. |
-| `ICON_STYLE` | `classic` | The style of the app icon: `classic`, `flat` or `night`. |
-| `ICON_FILE` | empty | One of your own icon files from `~/.config/syncman/icons/`; it wins over the two above. |
 
-The panel also keeps its window size in `~/.config/syncman/window.json`.
+The panel keeps its own choices next to it: the app icon in
+`~/.config/syncman/settings.json` and the window size in
+`~/.config/syncman/window.json`. Until 0.5.1 the icon was in `syncman.conf`
+as `ICON_COLOR`, `ICON_STYLE` and `ICON_FILE`; 0.6.0 moves those lines to
+`settings.json` the first time it runs.
 Running jobs read `DELETES`, `TRASH_DAYS` and the exclude lists again before
 every pass.
 
@@ -31,8 +32,8 @@ hold one rsync pattern per line; lines starting with `#` are comments.
 | `/logs/` | only the folder `logs` at the top of the folder the list applies to |
 
 - **The global exclude list**, `~/.config/syncman/exclude`, applies to every
-  pair of every job. Edit it with `syncman exclude` or in the panel under
-  **Configuration**.
+  pair of every job. Edit it with `syncman exclude` or in the panel's Preferences under
+  **Syncing**.
 - **A `.syncman-ignore` file** in a folder applies to that folder and
   everything below it. The file itself is synced, so both folders of a pair
   use the same list. The button on a pair's row in the panel edits the one in
@@ -60,8 +61,8 @@ files from machine to machine.
 ## The app icon
 
 The stock icon is the cloud kiwi from
-[kiwi-icons](https://github.com/derlocke-ng/kiwi-icons). In the panel, under
-**Appearance**, you can choose:
+[kiwi-icons](https://github.com/derlocke-ng/kiwi-icons). In the panel's
+Preferences (the gear), under **Appearance**, you can choose:
 
 - **App Icon**: the stock icon, the same kiwi in one of the kiwi-icons
   colourways (Ember, Ocean, Forest, the two-tones and the others), or one of
@@ -69,7 +70,7 @@ The stock icon is the cloud kiwi from
 - **Icon Style**: classic, flat or night.
 
 For your own icon, put a PNG or SVG file in `~/.config/syncman/icons/` (the
-folder button next to **App Icon** opens it) and open the panel again.
+folder button next to **App Icon** opens it) and open Preferences again.
 
 The panel writes the chosen icon to
 `~/.local/share/icons/hicolor/scalable/apps/eu.kiwinetwork.Syncman.svg`, where

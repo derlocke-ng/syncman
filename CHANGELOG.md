@@ -3,6 +3,27 @@
 Releases before 0.4.0 were the Nova Network edition; their history is in the
 release commit subjects.
 
+## 0.6.0 — unreleased
+
+- **The panel is laid out like the other Kiwi apps.** It is built on the kit
+  from [kiwi-template](https://github.com/derlocke-ng/kiwi-template), the
+  first app to use it.
+  - **+** in the header creates a job; the "New Sync Job" row is gone.
+  - A menu (☰) with Start Selected, Stop Selected, Help and About.
+  - Settings moved behind the gear, into Preferences: Syncing (interval,
+    jobs folder, exclude list), Deletions, Appearance and Window. The
+    interval is saved as you change it; there is no Save button.
+  - Results are shown as toasts; the status line at the bottom is gone, the
+    number of jobs is under the title.
+  - With no job, the window says what a job is and offers to create one.
+  - The log and the editor are dialogs in the window, not windows of their own.
+- The app icon choice moved from `syncman.conf` (`ICON_COLOR`, `ICON_STYLE`,
+  `ICON_FILE`) to `~/.config/syncman/settings.json`. It is moved the first
+  time 0.6.0 runs, and the update keeps your icon.
+- The panel is a Python package in `~/.local/lib/syncman/`;
+  `~/.local/share/syncman/` no longer holds program files, only the trash.
+- The command and the worker are unchanged.
+
 ## 0.5.1 — 2026-11-16
 
 - A started job now finds `inotifywait` when it is installed with Homebrew.

@@ -45,23 +45,29 @@ give no job.
 
 ## The panel
 
-`syncman-panel`, **Syncman** in the app grid, shows the same jobs:
+`syncman-panel`, **Syncman** in the app grid, shows the same jobs. It is
+laid out like the other Kiwi apps:
 
-- **Configuration**: the sync interval (saved to `syncman.conf`; restart the
-  running jobs to use it), a button that opens the jobs folder, and the global
-  exclude list.
-- **Deletions**: **Sync Deletions** and how many days the trash keeps deleted
-  files, with a button that opens the trash. See
-  [How syncing works](how-it-works.md#deletions).
-- **New Sync Job**: creates an empty job.
+- **+** in the header creates an empty job.
 - **Sync Jobs**: one row per job. Open a row for its pairs and its buttons:
   Start or Stop, Sync Now, Log (the last 80 lines), Add Pair (pick the two
   folders), Edit (the job file) and Delete (stops the job and deletes its file;
   the synced folders stay). The button on a pair edits that pair's
-  `.syncman-ignore` file. The check boxes choose which jobs **Start
-  Selected** and **Stop Selected** act on. A job whose name ends in
-  `-<this machine's host name>` is checked when the panel opens.
-- **Appearance**: the app icon, see [Configuration](configuration.md#the-app-icon).
+  `.syncman-ignore` file.
+- **The menu (☰)**: **Start Selected** and **Stop Selected** act on the jobs
+  whose check box is ticked, or on all jobs when none is. A job whose name
+  ends in `-<this machine's host name>` is ticked when the panel opens. Below
+  them: Help and About.
+- **The gear** opens Preferences:
+  - **Syncing**: the sync interval (saved to `syncman.conf` at once; restart
+    the running jobs to use it), a button that opens the jobs folder, and
+    the global exclude list.
+  - **Deletions**: **Sync Deletions** and how many days the trash keeps
+    deleted files, with a button that opens the trash. See
+    [How syncing works](how-it-works.md#deletions).
+  - **Appearance**: the app icon, see
+    [Configuration](configuration.md#the-app-icon).
+  - **Window**: the size, with a Reset button.
 
 The panel reads the job states again every five seconds. It opens at the size
 it had when you last closed it.
