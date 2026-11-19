@@ -54,10 +54,11 @@ laid out like the other Kiwi apps:
   folders), Edit (the job file) and Delete (stops the job and deletes its file;
   the synced folders stay). The button on a pair edits that pair's
   `.syncman-ignore` file.
-- **The menu (☰)**: **Start Selected** and **Stop Selected** act on the jobs
+- **Start Selected** and **Stop Selected**, above the jobs, act on the jobs
   whose check box is ticked, or on all jobs when none is. A job whose name
-  ends in `-<this machine's host name>` is ticked when the panel opens. Below
-  them: Help and About.
+  ends in `-<this machine's host name>` is ticked when the panel opens.
+- **The menu (☰)** opens the jobs folder and the trash folder, and has Help
+  and About.
 - **The gear** opens Preferences:
   - **Syncing**: the sync interval (saved to `syncman.conf` at once; restart
     the running jobs to use it), a button that opens the jobs folder, and

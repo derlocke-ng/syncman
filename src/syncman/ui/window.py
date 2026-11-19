@@ -41,9 +41,9 @@ class Window(Adw.ApplicationWindow):
 
     # ── layout ────────────────────────────────────────────────────────────
     def _build(self) -> None:
-        for name, verb in (("start-selected", "start"), ("stop-selected", "stop")):
+        for name, folder in (("open-jobs", conf.jobs_dir), ("open-trash", lambda: conf.TRASH_DIR)):
             action = Gio.SimpleAction.new(name, None)
-            action.connect("activate", lambda *_a, v=verb: self._bulk(v))
+            action.connect("activate", lambda *_a, f=folder: self._open_folder(f()))
             self.add_action(action)
         self.header = header.build(
             self,
@@ -52,12 +52,23 @@ class Window(Adw.ApplicationWindow):
             on_refresh=self.refresh,
             on_preferences=lambda: prefs.show(self),
             menu_actions=[
-                ("Start Selected", "win.start-selected"),
-                ("Stop Selected", "win.stop-selected"),
+                ("Open Jobs Folder", "win.open-jobs"),
+                ("Open Trash Folder", "win.open-trash"),
             ],
         )
 
         self._jobs_grp = Adw.PreferencesGroup(title="Sync Jobs")
+        # act on the ticked jobs, or on all of them when none is ticked
+        bulk = Gtk.Box(spacing=8)
+        for label, verb, css in (
+            ("Start Selected", "start", "suggested-action"),
+            ("Stop Selected", "stop", "destructive-action"),
+        ):
+            button = Gtk.Button(label=label)
+            button.add_css_class(css)
+            button.connect("clicked", lambda _b, v=verb: self._bulk(v))
+            bulk.append(button)
+        self._jobs_grp.set_header_suffix(bulk)
         page = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=24,
             margin_top=24, margin_bottom=24, margin_start=12, margin_end=12,
@@ -89,6 +100,10 @@ class Window(Adw.ApplicationWindow):
         view = Adw.ToolbarView(content=self.toasts)
         view.add_top_bar(self.header)
         self.set_content(view)
+
+    def _open_folder(self, path: str) -> None:
+        os.makedirs(path, exist_ok=True)
+        Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(path, None), None)
 
     def toast(self, text: str) -> None:
         self.toasts.add_toast(Adw.Toast(title=GLib.markup_escape_text(text), timeout=4))
@@ -134,7 +149,7 @@ class Window(Adw.ApplicationWindow):
         )
 
         # checkbox for selective start/stop; this device's jobs pre-checked
-        check = Gtk.CheckButton(tooltip_text="For Start Selected and Stop Selected in the menu")
+        check = Gtk.CheckButton(tooltip_text="For Start Selected and Stop Selected")
         if j["name"] not in self._selected:
             self._selected[j["name"]] = j["name"].endswith(f"-{conf.HOSTNAME}")
         check.set_active(self._selected[j["name"]])

@@ -33,7 +33,12 @@ class Preferences(Adw.PreferencesDialog):
 
     # ── Appearance ────────────────────────────────────────────────────────
     def _build_appearance(self) -> None:
-        group = Adw.PreferencesGroup(title="Appearance")
+        # Said once, here, and not as a toast after every change: trying the
+        # colours and styles one after the other is what this group is for.
+        group = Adw.PreferencesGroup(
+            title="Appearance",
+            description="The app grid may show a new icon only after you log in again.",
+        )
         self.general.add(group)
         self._busy = True
         self._preview = Gtk.Image(pixel_size=48, valign=Gtk.Align.CENTER)
@@ -98,11 +103,8 @@ class Preferences(Adw.PreferencesDialog):
             return
         error = icon.apply(self.info, self.store)
         self._show_icon()
-        self.toast(
-            f"Icon not changed: {error}"
-            if error
-            else "Icon changed. The app grid may show it only after you log in again."
-        )
+        if error:
+            self.toast(f"Icon not changed: {error}")
 
     def _open_icons_folder(self, *_args) -> None:
         folder = self.info.icons_dir()
