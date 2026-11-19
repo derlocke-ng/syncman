@@ -3,7 +3,7 @@
 Releases before 0.4.0 were the Nova Network edition; their history is in the
 release commit subjects.
 
-## 0.6.0 — unreleased
+## 0.6.0 — 2026-11-19
 
 - **The panel is laid out like the other Kiwi apps.** It is built on the kit
   from [kiwi-template](https://github.com/derlocke-ng/kiwi-template), the
